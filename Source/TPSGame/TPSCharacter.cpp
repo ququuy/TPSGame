@@ -89,7 +89,7 @@ void ATPSCharacter::Fire()
 	FRotator CameraRotation;
 	GetActorEyesViewPoint(CameraLocation, CameraRotation);
 
-	MuzzleOffset.Set(50.0f, 3.0f, -50.0f);
+	MuzzleOffset.Set(65.0f, 3.0f, -50.0f);
 
 	FVector MuzzleLocation = CameraLocation + FTransform(CameraRotation).TransformVector(MuzzleOffset);
 	FRotator MuzzleRotation = CameraRotation;
