@@ -17,6 +17,8 @@ public:
 	// Sets default values for this character's properties
 	ATPSCharacter();
 
+	
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -34,13 +36,18 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Shoot Projectile")
     TSubclassOf<class AGrenade> GrenadeClass;
 	
-    UPROPERTY(EditAnywhere, Category = "Shoot Projectile")
+    UPROPERTY(EditAnywhere, Category = "Animation")
     class UAnimMontage* GrenadeMontage;
+	
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    class UAnimMontage* FireMontage;
 
 	/*** Reloading ***/	
-    UPROPERTY(EditAnywhere, Category = "Shoot Projectile")
+    UPROPERTY(EditAnywhere, Category = "Animation")
     class UAnimMontage* ReloadingMontage;
 public:	
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Gameplay")
+	bool CanShoot;
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -48,10 +55,26 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	/**** Shooting ****/
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool isFiring;
 	
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void Fire();
 	
+	UFUNCTION( Server, Reliable )
+	void ServerFire(const FVector& MuzzleLocation, const FRotator& MuzzleRotation);
+	UFUNCTION( NetMulticast, Reliable )
+	void ClientFire(const FVector& MuzzleLocation, const FRotator& MuzzleRotation);
+	//void ClientFire();
+
+	
+	UFUNCTION(BlueprintCallable)
+	void StartShooting(const FVector& MuzzleLocation, const FRotator& MuzzleRotation);
+	UFUNCTION(BlueprintCallable)
+	void StopShooting();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnFireFinished();
 
 	// Gun muzzle offset from the camera location.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
@@ -64,6 +87,16 @@ public:
 	int CurrentWeaponNum;
 
 	/**** Grenade ***/
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool isGrenading;
+
+	UFUNCTION( Server, Reliable )
+	void ServerTossGrenade();
+	UFUNCTION( NetMulticast, Reliable )
+	void ClientTossGrenade();
+
+	//void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	AGrenade* Grenade;
 	

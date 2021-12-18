@@ -3,6 +3,8 @@
 
 #include "TPSCharacter.h"
 
+#include "Net/UnrealNetwork.h"
+
 // Sets default values
 ATPSCharacter::ATPSCharacter()
 {
@@ -12,6 +14,41 @@ ATPSCharacter::ATPSCharacter()
 	CurrentWeaponNum = 1;
 	CurrentWeaponType = true;
 
+	isGrenading = false;
+	isFiring = false;
+	CanShoot = true;
+
+}
+
+void ATPSCharacter::ServerTossGrenade_Implementation()
+{
+	ClientTossGrenade();	
+}
+
+void ATPSCharacter::ClientTossGrenade_Implementation()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("grenade: %d"), isGrenading));
+	if (GrenadeClass)
+	{
+		//HitWorldLocation.X, HitWorldLocation.Y, HitWorldLocation.Z));    
+		Grenade = GetWorld()->SpawnActor<AGrenade>(GrenadeClass);
+		if (Grenade)
+		{
+			
+			CharacterMesh = GetMesh();
+			Grenade->AttachToComponent(CharacterMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, FName("GrenadeSocket"));
+			if (UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance())
+			{
+				if (GrenadeMontage)
+				{
+					isGrenading = true;
+					//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("toss grenade!!!!!!!")));
+					AnimInstance->Montage_Play(GrenadeMontage);
+				}
+			}
+		}
+	}
+	
 }
 
 // Called when the game starts or when spawned
@@ -47,17 +84,37 @@ void ATPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 void ATPSCharacter::Fire()
 {
+	// First, Calculate Bullet Transform Locally
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	GetActorEyesViewPoint(CameraLocation, CameraRotation);
+
+	MuzzleOffset.Set(50.0f, 3.0f, -50.0f);
+
+	FVector MuzzleLocation = CameraLocation + FTransform(CameraRotation).TransformVector(MuzzleOffset);
+	FRotator MuzzleRotation = CameraRotation;
+	MuzzleRotation.Pitch += 0.0f;
+
+	// Server get the event
+	ServerFire(MuzzleLocation, MuzzleRotation);
+}
+
+void ATPSCharacter::ServerFire_Implementation(const FVector& MuzzleLocation, const FRotator& MuzzleRotation)
+{
+	ClientFire(MuzzleLocation, MuzzleRotation);	
+}
+
+void ATPSCharacter::ClientFire_Implementation(const FVector& MuzzleLocation, const FRotator& MuzzleRotation)
+{
+	StartShooting(MuzzleLocation, MuzzleRotation);
+}
+
+
+void ATPSCharacter::StartShooting(const FVector& MuzzleLocation, const FRotator& MuzzleRotation)
+{
+	if (!CanShoot) return;
 	if (BulletClass)
 	{
-		FVector CameraLocation;
-		FRotator CameraRotation;
-		GetActorEyesViewPoint(CameraLocation, CameraRotation);
-
-		MuzzleOffset.Set(100.0f, 5.0f, -2.0f);
-
-		FVector MuzzleLocation = CameraLocation + FTransform(CameraRotation).TransformVector(MuzzleOffset);
-		FRotator MuzzleRotation = CameraRotation;
-		MuzzleRotation.Pitch += 8.0f;
 
 		UWorld* World = GetWorld();
 		if (World)
@@ -73,32 +130,38 @@ void ATPSCharacter::Fire()
                 // Set the projectile's initial trajectory.
                 FVector LaunchDirection = MuzzleRotation.Vector();
                 Bullet->FireInDirection(LaunchDirection);
+
+            	
+				CharacterMesh = GetMesh();
+				if (UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance())
+				{
+					if (FireMontage)
+					{
+						isFiring = true;
+						//GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Fire Montage Playing")));
+						AnimInstance->Montage_Play(FireMontage);
+					}
+				}
             }
 		}
 	}
 }
 
+void ATPSCharacter::StopShooting()
+{
+	isFiring = false;	
+}
+
+void ATPSCharacter::OnFireFinished()
+{
+	StopShooting();
+}
+
+
+
 void ATPSCharacter::TossGrenade()
 {
-	if (GrenadeClass)
-	{
-          	
-          	//HitWorldLocation.X, HitWorldLocation.Y, HitWorldLocation.Z));    
-		Grenade = GetWorld()->SpawnActor<AGrenade>(GrenadeClass);
-		if (Grenade)
-		{
-			CharacterMesh = GetMesh();
-			Grenade->AttachToComponent(CharacterMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, FName("GrenadeSocket"));
-			if (UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance())
-			{
-				if (GrenadeMontage)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("toss grenade!!!!!!!")));
-					AnimInstance->Montage_Play(GrenadeMontage);
-				}
-			}
-		}
-	}
+	ServerTossGrenade();
 	
 }
 
@@ -120,6 +183,9 @@ void ATPSCharacter::OnGrenadeReleased()
 
 		
 		Grenade->GrenadeMesh->AddImpulse(ForwardVector);
+
+		isGrenading = false;
+		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("end grenade: %d"), isGrenading));
 
 		
 	}

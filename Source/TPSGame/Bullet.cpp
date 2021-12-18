@@ -89,5 +89,7 @@ void ABullet::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrim
 		//PlayerCharacter->AddScore(2);
 	}
 
+	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//Grenade->GrenadeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
    //Destroy();
 }	

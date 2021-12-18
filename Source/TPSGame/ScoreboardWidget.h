@@ -17,6 +17,8 @@ class TPSGAME_API UScoreboardWidget : public UUserWidget
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
 	int DisplayedScore;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
+	int DisplayedKill;
 	
 public:
 	virtual void NativeConstruct() override;
@@ -24,8 +26,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	class UTextBlock* TextScore;
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-	class UTextBlock* TextAdditionalScore;
+	class UTextBlock* TextKill;
 
-	UFUNCTION(BlueprintCallable, Category = "HitTarget Event")
+	UFUNCTION(BlueprintCallable, Category = "Shoot Event")
 	void UpdateDisplayedScore(int NewScore);
+	
+	UFUNCTION(BlueprintCallable, Category = "Shoot Event")
+	void UpdateDisplayedKill(int NewKill);
 };
